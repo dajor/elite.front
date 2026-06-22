@@ -1,51 +1,144 @@
 import { Engine } from "@babylonjs/core/Engines/engine";
-import { Scene } from "@babylonjs/core/scene";
-import { Vector3 } from "@babylonjs/core/Maths/math.vector";
-import { FreeCamera } from "@babylonjs/core/Cameras/freeCamera";
-import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
-import { PointsCloudSystem } from "@babylonjs/core/Particles/pointsCloudSystem";
-import type { SolidParticle } from "@babylonjs/core/Particles/solidParticle";
+import type { Scene } from "@babylonjs/core/scene";
+import { generateGalaxy } from "./world/galaxy.ts";
+import type { GalaxyModel, SystemModel } from "./world/types.ts";
+import { createSystemScene } from "./render/systemScene.ts";
+import type { CombatTelemetry } from "./game/combat.ts";
+import type { FlightTelemetry } from "./game/flight.ts";
+import type { NavigationTelemetry } from "./game/navigation.ts";
+import { createCommanderLedger, createMarket } from "./game/economy.ts";
+import { createCombatHud } from "./ui/combatHud.ts";
+import { createNavigationHud } from "./ui/navigationHud.ts";
+import { createTradePanel, type TradePanel } from "./ui/tradePanel.ts";
 
-/**
- * Phase 1 bootstrap: engine + scene + starfield.
- * Placeholder until Phase 3 render layer lands.
- */
+interface Hud {
+  setSystem(systemName: string): void;
+  update(telemetry: FlightTelemetry): void;
+}
+
+const MAX_FUEL = 7;
+
+function appendHudRow(root: HTMLElement, label: string): HTMLElement {
+  const labelEl = document.createElement("span");
+  labelEl.textContent = label;
+  const valueEl = document.createElement("strong");
+  valueEl.dataset.value = label.toLowerCase();
+  valueEl.textContent = "0";
+  root.append(labelEl, valueEl);
+  return valueEl;
+}
+
+function createHud(host: HTMLElement, systemName: string): Hud {
+  const root = document.createElement("div");
+  root.id = "hud";
+
+  const systemLabel = document.createElement("span");
+  systemLabel.textContent = "SYS";
+  const systemValue = document.createElement("strong");
+  systemValue.textContent = systemName.toUpperCase();
+  root.append(systemLabel, systemValue);
+
+  const speed = appendHudRow(root, "SPD");
+  const throttle = appendHudRow(root, "THR");
+  const view = appendHudRow(root, "VIEW");
+  const position = appendHudRow(root, "POS");
+  host.appendChild(root);
+
+  return {
+    setSystem(nextSystemName: string): void {
+      systemValue.textContent = nextSystemName.toUpperCase();
+    },
+    update(telemetry: FlightTelemetry): void {
+      speed.textContent = telemetry.speed.toFixed(1);
+      throttle.textContent = `${Math.round(telemetry.throttle * 100)}%`;
+      view.textContent = telemetry.viewMode;
+      position.textContent = `${telemetry.position.x.toFixed(0)} ${telemetry.position.y.toFixed(0)} ${telemetry.position.z.toFixed(0)}`;
+    },
+  };
+}
+
+function systemDistanceLj(a: SystemModel, b: SystemModel): number {
+  return Math.hypot(a.x - b.x, a.y - b.y) / 4;
+}
+
+function nextReachableSystem(galaxy: GalaxyModel, current: SystemModel): { system: SystemModel; distance: number } {
+  const candidates = galaxy.systems
+    .filter((system) => system.index !== current.index)
+    .map((system) => ({ system, distance: systemDistanceLj(current, system) }))
+    .filter(({ distance }) => distance > 0 && distance <= MAX_FUEL)
+    .sort((a, b) => a.distance - b.distance || a.system.index - b.system.index);
+
+  if (candidates[0]) return candidates[0];
+  const fallback = galaxy.systems[(current.index + 1) % galaxy.systems.length];
+  return { system: fallback, distance: systemDistanceLj(current, fallback) };
+}
+
+/** Entry point: build galaxy 0, drop the player at system 0 (Lave-analog). */
 function boot(): void {
   const host = document.getElementById("app");
   if (!host) throw new Error("#app mount not found");
+  const appHost = host;
 
   const canvas = document.createElement("canvas");
-  host.appendChild(canvas);
+  canvas.tabIndex = 0;
+  appHost.appendChild(canvas);
+  canvas.focus();
 
   const engine = new Engine(canvas, true, { preserveDrawingBuffer: false, stencil: true });
-  const scene = new Scene(engine);
-  scene.clearColor.set(0, 0, 0, 1);
+  const galaxy = generateGalaxy(0);
+  const startSystem = galaxy.systems[0];
+  const ledger = createCommanderLedger();
+  const hud = createHud(appHost, startSystem.name);
+  const combatHud = createCombatHud(appHost);
+  const navigationHud = createNavigationHud(appHost);
+  let activeScene: Scene | undefined;
+  let tradePanel: TradePanel | undefined;
 
-  const camera = new FreeCamera("cam", new Vector3(0, 0, -50), scene);
-  camera.setTarget(Vector3.Zero());
-  camera.attachControl(canvas, true);
+  function loadSystem(system: SystemModel): void {
+    const previousScene = activeScene;
+    tradePanel?.dispose();
+    hud.setSystem(system.name);
 
-  const light = new HemisphericLight("light", new Vector3(0, 1, 0), scene);
-  light.intensity = 0.4;
+    tradePanel = createTradePanel(appHost, createMarket(system), ledger);
+    if (window.location.hash === "#trade") tradePanel.setOpen(true);
 
-  // Starfield: ~3000 points on a large sphere.
-  const pcs = new PointsCloudSystem("stars", 2, scene);
-  pcs.addPoints(3000, (particle: SolidParticle) => {
-    const r = 500 + Math.random() * 500;
-    const theta = Math.acos(2 * Math.random() - 1);
-    const phi = Math.random() * Math.PI * 2;
-    particle.position = new Vector3(
-      r * Math.sin(theta) * Math.cos(phi),
-      r * Math.sin(theta) * Math.sin(phi),
-      r * Math.cos(theta),
-    );
+    const destination = nextReachableSystem(galaxy, system);
+    const nextScene = createSystemScene(engine, system, {
+      destination: destination.system,
+      destinationDistance: destination.distance,
+      fuel: MAX_FUEL,
+      onFlightUpdate: (telemetry) => hud.update(telemetry),
+      onCombatUpdate: (telemetry: CombatTelemetry) => combatHud.update(telemetry),
+      onNavigationUpdate: (telemetry: NavigationTelemetry) => navigationHud.update(telemetry),
+      onDocked: () => tradePanel?.setOpen(true),
+      onJumpComplete: (nextSystem) => {
+        window.location.hash = "";
+        loadSystem(nextSystem);
+      },
+    });
+    activeScene = nextScene;
+    if (previousScene) {
+      window.setTimeout(() => previousScene.dispose(), 0);
+    }
+  }
+
+  hud.setSystem(startSystem.name);
+  window.addEventListener("keydown", (event) => {
+    if (event.code === "KeyT") {
+      event.preventDefault();
+      tradePanel?.toggle();
+    }
+    if (event.code === "Escape") {
+      tradePanel?.setOpen(false);
+    }
   });
-  pcs.buildMeshAsync().then(() => {
-    console.info("[elite] starfield ready");
-  });
 
-  engine.runRenderLoop(() => scene.render());
+  loadSystem(startSystem);
+
+  engine.runRenderLoop(() => activeScene?.render());
   window.addEventListener("resize", () => engine.resize());
+
+  console.info(`[elite] started at ${startSystem.name} (sys #${startSystem.index}, galaxy ${startSystem.galaxy})`);
 }
 
 boot();
