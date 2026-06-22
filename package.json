@@ -1,0 +1,22 @@
+{
+  "name": "elite-front",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^7.54.0",
+    "@babylonjs/materials": "^7.54.0",
+    "@babylonjs/loaders": "^7.54.0",
+    "peerjs": "^1.5.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}
