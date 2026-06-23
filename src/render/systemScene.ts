@@ -7,6 +7,7 @@ import { HemisphericLight } from "@babylonjs/core/Lights/hemisphericLight";
 import { PointsCloudSystem } from "@babylonjs/core/Particles/pointsCloudSystem";
 import type { SolidParticle } from "@babylonjs/core/Particles/solidParticle";
 import { StandardMaterial } from "@babylonjs/core/Materials/standardMaterial";
+import type { GlowLayer } from "@babylonjs/core/Layers/glowLayer";
 
 import type { SystemModel } from "../world/types.ts";
 import { attachCombat, type CombatTelemetry } from "../game/combat.ts";
@@ -39,7 +40,7 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-function createStarfield(scene: Scene, system: SystemModel): void {
+function createStarfield(scene: Scene, system: SystemModel, glow?: GlowLayer): void {
   const random = seededRandom(system.goatSoupSeed);
   const pcs = new PointsCloudSystem("stars", 2.25, scene);
   pcs.addPoints(3200, (particle: SolidParticle) => {
@@ -58,12 +59,14 @@ function createStarfield(scene: Scene, system: SystemModel): void {
   const starMat = new StandardMaterial("starMat", scene);
   starMat.pointsCloud = true;
   starMat.pointSize = 2.25;
-  starMat.emissiveColor = new Color3(0.7, 0.9, 1);
+  starMat.emissiveColor = new Color3(0.45, 0.65, 0.8);
   starMat.disableLighting = true;
 
   void pcs.buildMeshAsync().then((mesh) => {
     mesh.material = starMat;
     mesh.alwaysSelectAsActiveMesh = true;
+    // Thousands of emissive star points can overexpose GlowLayer on some GPU paths.
+    glow?.addExcludedMesh(mesh);
   });
 }
 
@@ -78,6 +81,7 @@ export function createSystemScene(
 ): Scene {
   const scene = new Scene(engine);
   scene.clearColor.set(0, 0, 0, 1);
+  const glow = configurePostFX(scene);
 
   const camera = new UniversalCamera("cam", new Vector3(0, 9, -42), scene);
   camera.setTarget(new Vector3(0, -1, 105));
@@ -89,7 +93,7 @@ export function createSystemScene(
   const light = new HemisphericLight("light", new Vector3(0, 1, 0), scene);
   light.intensity = 0.18;
 
-  createStarfield(scene, system);
+  createStarfield(scene, system, glow);
   createPlanet(scene, system);
 
   const station = createCoriolisStation(scene);
@@ -163,6 +167,5 @@ export function createSystemScene(
     });
   });
 
-  configurePostFX(scene);
   return scene;
 }

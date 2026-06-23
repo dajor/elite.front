@@ -81,10 +81,16 @@ function boot(): void {
 
   const canvas = document.createElement("canvas");
   canvas.tabIndex = 0;
+  canvas.style.backgroundColor = "#000";
   appHost.appendChild(canvas);
   canvas.focus();
 
-  const engine = new Engine(canvas, true, { preserveDrawingBuffer: false, stencil: true });
+  const engine = new Engine(canvas, true, {
+    alpha: false,
+    premultipliedAlpha: false,
+    preserveDrawingBuffer: false,
+    stencil: true,
+  });
   const galaxy = generateGalaxy(0);
   const startSystem = galaxy.systems[0];
   const ledger = createCommanderLedger();
