@@ -9,6 +9,7 @@ import type { NavigationTelemetry } from "./game/navigation.ts";
 import { createCommanderLedger, createMarket } from "./game/economy.ts";
 import { createCombatHud } from "./ui/combatHud.ts";
 import { createNavigationHud } from "./ui/navigationHud.ts";
+import { createHelpOverlay } from "./ui/helpOverlay.ts";
 import { createTradePanel, type TradePanel } from "./ui/tradePanel.ts";
 
 interface Hud {
@@ -97,6 +98,7 @@ function boot(): void {
   const hud = createHud(appHost, startSystem.name);
   const combatHud = createCombatHud(appHost);
   const navigationHud = createNavigationHud(appHost);
+  const helpOverlay = createHelpOverlay(appHost, () => canvas.focus());
   let activeScene: Scene | undefined;
   let tradePanel: TradePanel | undefined;
 
@@ -130,11 +132,16 @@ function boot(): void {
 
   hud.setSystem(startSystem.name);
   window.addEventListener("keydown", (event) => {
+    if (event.code === "KeyH" || event.key === "?") {
+      event.preventDefault();
+      helpOverlay.toggle();
+    }
     if (event.code === "KeyT") {
       event.preventDefault();
       tradePanel?.toggle();
     }
     if (event.code === "Escape") {
+      helpOverlay.setOpen(false);
       tradePanel?.setOpen(false);
     }
   });

@@ -32,7 +32,8 @@ systems.
 | `T` | Toggle station market |
 | `C` | Docking computer / launch |
 | `J` | Hyperspace jump |
-| `Esc` | Close market |
+| `H` / `?` | Toggle keyboard help |
+| `Esc` | Close market/help |
 
 ## Development
 
