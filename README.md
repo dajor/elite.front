@@ -5,6 +5,8 @@ The current slice implements the core single-player loop: neon-vector rendering,
 ship flight, trading, combat, docking, and hyperspace jumps between generated
 systems.
 
+![Elite Front gameplay screenshot](docs/screenshots/game.png)
+
 ## Features
 
 - Procedural galaxy data with deterministic systems and station markets.
