@@ -22,6 +22,7 @@ export interface NavigationController {
 
 interface NavigationOptions {
   fuel: number;
+  getTimeScale?: () => number;
   onUpdate?: (telemetry: NavigationTelemetry) => void;
   onDocked?: () => void;
   onJumpComplete?: (destination: SystemModel) => void;
@@ -107,7 +108,7 @@ export function attachNavigation(
   });
 
   const updateObserver = scene.onBeforeRenderObservable.add(() => {
-    const dt = Math.min(scene.getEngine().getDeltaTime() / 1000, 0.05);
+    const dt = Math.min((scene.getEngine().getDeltaTime() / 1000) * (options.getTimeScale?.() ?? 1), 0.25);
     const slot = slotPosition(station);
     const normal = slotNormal(station);
 

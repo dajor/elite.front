@@ -11,7 +11,8 @@ systems.
 
 - Procedural galaxy data with deterministic systems and station markets.
 - Neon-vector scene rendering: starfield, planet, Coriolis station, and ships.
-- Flight model with throttle, pitch, yaw, roll, and four classic view modes.
+- Frontier-style Newtonian flight with throttle, inertia, retro-thrust,
+  autopilot, time acceleration, and four classic view modes.
 - Station market UI with credits, stock, cargo capacity, buy, and sell actions.
 - Combat loop with target cycling, lasers, missiles, shield/hull damage, and radar.
 - Auto-docking and hyperspace jumps to reachable systems.
@@ -25,12 +26,15 @@ systems.
 | `Q` / `E` | Roll |
 | `Shift` / `Ctrl` | Throttle up/down |
 | `+` / `-` | Step throttle up/down |
+| `Backspace` | Retro-thrust brake |
 | `1` / `2` / `3` / `4` | Front, rear, left, right view |
 | `Space` | Fire laser |
 | `R` | Cycle target |
 | `M` | Fire missile |
 | `T` | Toggle station market |
 | `C` | Docking computer / launch |
+| `B` | Toggle station autopilot |
+| `Z` / `X` | Decrease/increase time acceleration |
 | `J` | Hyperspace jump |
 | `H` / `?` | Toggle keyboard help |
 | `Esc` | Close market/help |

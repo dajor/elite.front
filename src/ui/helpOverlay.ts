@@ -17,6 +17,7 @@ const HELP_SECTIONS: HelpSection[] = [
       ["Q/E", "Rollen"],
       ["Shift/Ctrl", "Schub stufenlos"],
       ["+/-", "Schub in Stufen"],
+      ["Backspace", "Retro-Bremse"],
       ["1/2/3/4", "Ansicht wechseln"],
     ],
   },
@@ -39,6 +40,8 @@ const HELP_SECTIONS: HelpSection[] = [
   {
     title: "Navigation",
     items: [
+      ["B", "Autopilot Station"],
+      ["Z/X", "Zeit langsamer/schneller"],
       ["J", "Hypersprung"],
       ["H oder ?", "Tastenhilfe"],
     ],

@@ -41,6 +41,8 @@ function createHud(host: HTMLElement, systemName: string): Hud {
 
   const speed = appendHudRow(root, "SPD");
   const throttle = appendHudRow(root, "THR");
+  const time = appendHudRow(root, "TIM");
+  const autopilot = appendHudRow(root, "AP");
   const view = appendHudRow(root, "VIEW");
   const position = appendHudRow(root, "POS");
   host.appendChild(root);
@@ -52,6 +54,8 @@ function createHud(host: HTMLElement, systemName: string): Hud {
     update(telemetry: FlightTelemetry): void {
       speed.textContent = telemetry.speed.toFixed(1);
       throttle.textContent = `${Math.round(telemetry.throttle * 100)}%`;
+      time.textContent = `${telemetry.timeScale}X`;
+      autopilot.textContent = telemetry.autopilotMode;
       view.textContent = telemetry.viewMode;
       position.textContent = `${telemetry.position.x.toFixed(0)} ${telemetry.position.y.toFixed(0)} ${telemetry.position.z.toFixed(0)}`;
     },

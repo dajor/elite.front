@@ -29,6 +29,8 @@ export interface SystemSceneOptions {
   onJumpComplete?: (destination: SystemModel) => void;
 }
 
+const TIME_SCALE_STEPS = [1, 2, 4, 8, 16, 32] as const;
+
 function seededRandom(seed: number): () => number {
   let state = seed >>> 0;
   return () => {
@@ -82,6 +84,12 @@ export function createSystemScene(
   const scene = new Scene(engine);
   scene.clearColor.set(0, 0, 0, 1);
   const glow = configurePostFX(scene);
+  let timeScaleIndex = 0;
+  const getTimeScale = (): number => TIME_SCALE_STEPS[timeScaleIndex];
+  const adjustTimeScale = (direction: -1 | 1): number => {
+    timeScaleIndex = Math.min(TIME_SCALE_STEPS.length - 1, Math.max(0, timeScaleIndex + direction));
+    return getTimeScale();
+  };
 
   const camera = new UniversalCamera("cam", new Vector3(0, 9, -42), scene);
   camera.setTarget(new Vector3(0, -1, 105));
@@ -104,6 +112,13 @@ export function createSystemScene(
   playerShip.rotation.set(-0.08, 0, 0);
   let activeViewDirection = playerShip.getDirection(Vector3.Forward()).normalize();
   attachPlayerFlight(scene, playerShip, camera, SHIPS.cobra3, {
+    adjustTimeScale,
+    autopilotTarget: {
+      name: "STATION",
+      getPosition: () => station.position,
+      holdDistance: 42,
+    },
+    getTimeScale,
     onUpdate: (telemetry) => {
       activeViewDirection = new Vector3(
         telemetry.viewDirection.x,
@@ -134,6 +149,7 @@ export function createSystemScene(
   })), {
     onUpdate: options.onCombatUpdate,
     getAimDirection: () => activeViewDirection,
+    getTimeScale,
   });
 
   if (options.destination) {
@@ -146,6 +162,7 @@ export function createSystemScene(
       options.destinationDistance ?? 0,
       {
         fuel: options.fuel ?? 7,
+        getTimeScale,
         onUpdate: options.onNavigationUpdate,
         onDocked: options.onDocked,
         onJumpComplete: options.onJumpComplete,
@@ -155,7 +172,7 @@ export function createSystemScene(
 
   let elapsed = 0;
   scene.registerBeforeRender(() => {
-    const dt = scene.getEngine().getDeltaTime() / 1000;
+    const dt = (scene.getEngine().getDeltaTime() / 1000) * getTimeScale();
     elapsed += dt;
 
     traffic.forEach(({ mesh, base, phase, turn }) => {

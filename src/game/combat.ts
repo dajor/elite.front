@@ -45,6 +45,7 @@ export interface CombatController {
 }
 
 interface CombatOptions {
+  getTimeScale?: () => number;
   onUpdate?: (telemetry: CombatTelemetry) => void;
   getAimDirection?: () => Vector3;
 }
@@ -207,7 +208,7 @@ export function attachCombat(
   });
 
   const updateObserver = scene.onBeforeRenderObservable.add(() => {
-    const dt = Math.min(scene.getEngine().getDeltaTime() / 1000, 0.05);
+    const dt = Math.min((scene.getEngine().getDeltaTime() / 1000) * (options.getTimeScale?.() ?? 1), 0.25);
     laserCooldown = Math.max(0, laserCooldown - dt);
     laserHeat = Math.max(0, laserHeat - dt * 0.32);
 
